@@ -179,6 +179,11 @@ export default function PackingModule() {
                   <h2 className="text-5xl font-black text-white px-10">
                     {step === 'SCAN_PRODUCT' ? currentOrder?.items[0]?.order_items?.products?.name : 'TOWG-SH-09384-LABEL'}
                   </h2>
+                  {step === 'SCAN_PRODUCT' && currentOrder?.items[0]?.quantity > 1 && (
+                    <div className="bg-amber-500/10 text-amber-500 font-black text-[10px] uppercase tracking-widest px-4 py-1.5 rounded-full border border-amber-500/20 mt-4 animate-pulse">
+                      Item from Batch Pick (Split Qty)
+                    </div>
+                  )}
                </div>
 
                <button 

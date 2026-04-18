@@ -165,9 +165,12 @@ export const calculateOptimisedRoute = (orders) => {
   return { path, distance: Math.round(distance), time: Math.round(distance / 50) };
 };
 
-export const calculateSessionMetrics = (pickItems) => {
-  if (!pickItems || !Array.isArray(pickItems)) return { distance: 0, distanceSaved: 0, timeSavedMinutes: 0 };
+export const calculateSessionMetrics = (pickItems, session) => {
+  if (!pickItems || !Array.isArray(pickItems)) {
+    return { distance: 0, distanceSaved: 0, timeSavedMinutes: 0, pph: 0, accuracy: 100 };
+  }
 
+  // 1. Map locations to coordinates
   const items = pickItems.map(pi => {
     if (!pi || !pi.locations || !pi.locations.location_code) return null;
     const parts = pi.locations.location_code.split('.');
@@ -176,9 +179,14 @@ export const calculateSessionMetrics = (pickItems) => {
     return { ...pi, x, y };
   }).filter(Boolean);
 
-  if (items.length === 0) return { distance: 0, distanceSaved: 0, timeSavedMinutes: 0 };
+  if (items.length === 0) {
+    return { distance: 0, distanceSaved: 0, timeSavedMinutes: 0, pph: 0, accuracy: 100 };
+  }
 
+  // 2. Calculate Optimised Path (Batch consolidated visit)
   const optResult = calculateOptimisedRoute([{ items }]);
+  
+  // 3. Naive Path: Sequential walk per item (even if in same location)
   const naiveDistance = items.reduce((acc, item, idx) => {
     if (idx === 0) return acc + Math.sqrt(Math.pow(item.x - PACKING_STATION.x, 2) + Math.pow(item.y - PACKING_STATION.y, 2));
     const prev = items[idx - 1];
@@ -186,9 +194,25 @@ export const calculateSessionMetrics = (pickItems) => {
   }, 0) + Math.sqrt(Math.pow(items[items.length-1].x - PACKING_STATION.x, 2) + Math.pow(items[items.length-1].y - PACKING_STATION.y, 2));
 
   const distanceSaved = Math.max(0, Math.round(naiveDistance - optResult.distance));
+  
+  // 4. Time Metrics
+  const startTime = session?.created_at ? new Date(session.created_at) : new Date();
+  const now = new Date();
+  const elapsedHours = Math.max(0.01, (now - startTime) / (1000 * 60 * 60));
+  
+  const pickedItems = pickItems.filter(pi => pi.picked).length;
+  const pickedUnits = pickItems.filter(pi => pi.picked).reduce((acc, pi) => acc + (pi.quantity || 1), 0);
+  
+  const pph = Math.round(pickedUnits / elapsedHours);
+  
+  // 5. Accuracy (assuming all items picked in a completed session are accurate for demo purposes)
+  const accuracy = pickItems.length > 0 ? (pickedItems / pickItems.length) * 100 : 100;
+
   return {
     distance: optResult.distance || 0,
     distanceSaved: distanceSaved || 0,
-    timeSavedMinutes: Math.round((distanceSaved / 1.4) / 60) || 0
+    timeSavedMinutes: Math.round((distanceSaved / 1.4) / 60) || 0, // 1.4 m/s walking speed
+    pph,
+    accuracy: Math.round(accuracy)
   };
 };

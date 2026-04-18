@@ -55,11 +55,24 @@ export default function ManagerDashboard() {
   const fetchDashboardData = async () => {
     // 1. Core Counts
     const { count: pendingCount } = await supabase.from('orders').select('*', { count: 'exact', head: true }).eq('status', 'pending');
-    const { count: completedCount } = await supabase.from('orders').select('*', { count: 'exact', head: true }).eq('status', 'shipped');
+    const { count: shippedCount } = await supabase.from('orders').select('*', { count: 'exact', head: true }).eq('status', 'shipped');
     const { count: flagCount } = await supabase.from('location_flags').select('*', { count: 'exact', head: true }).eq('resolved', false);
-    const { count: activePickers } = await supabase.from('pick_sessions').select('*', { count: 'exact', head: true }).eq('status', 'in_progress');
+    
+    // Active Pickers - unique users in sessions in_progress
+    const { data: activeSessions } = await supabase.from('pick_sessions').select('picker_name').eq('status', 'in_progress');
+    const uniquePickers = new Set(activeSessions?.map(s => s.picker_name)).size;
 
-    // 2. Recent Flags
+    // 2. Performance Metric - PPH
+    const { data: recentPicks } = await supabase
+      .from('pick_items')
+      .select('picked_at, quantity')
+      .eq('picked', true)
+      .gt('picked_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
+
+    const totalPickedIn24h = (recentPicks || []).reduce((acc, p) => acc + (p.quantity || 1), 0);
+    const pph = Math.round(totalPickedIn24h / 24);
+
+    // 3. Recent Flags
     const { data: flags } = await supabase
       .from('location_flags')
       .select('*, locations(location_code), products(name)')
@@ -67,24 +80,36 @@ export default function ManagerDashboard() {
       .limit(3)
       .order('created_at', { ascending: false });
 
-    // 3. Mock Chart Data (Real dashboard would aggregate from pick_items picked_at)
-    // We'll generate a curve based on current volume to make it look "alive"
-    const hours = ['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00'];
-    const mockData = hours.map(h => ({
-      name: h,
-      picks: Math.floor(Math.random() * 50) + 10,
-      savings: Math.floor(Math.random() * 20) + 5
-    }));
+    // 4. Throughput Chart Data (Aggregated by hour for last 8 hours)
+    const chartPoints = [];
+    const now = new Date();
+    for (let i = 7; i >= 0; i--) {
+      const hourStart = new Date(now);
+      hourStart.setHours(now.getHours() - i, 0, 0, 0);
+      const hourEnd = new Date(hourStart);
+      hourEnd.setHours(hourStart.getHours() + 1);
+
+      const picksInHour = (recentPicks || []).filter(p => {
+        const d = new Date(p.picked_at);
+        return d >= hourStart && d < hourEnd;
+      }).reduce((acc, p) => acc + (p.quantity || 1), 0);
+
+      chartPoints.push({
+        name: hourStart.getHours() + ':00',
+        picks: picksInHour,
+        savings: Math.round(picksInHour * 0.4) // Comparative simulation
+      });
+    }
 
     setStats({
-      activePickers: activePickers || 0,
+      activePickers: uniquePickers,
       pendingOrders: pendingCount || 0,
-      completedToday: completedCount || 0,
+      completedToday: shippedCount || 0,
       flagCount: flagCount || 0,
-      picksPerHour: Math.floor(Math.random() * 40) + 80 // Productivity metric
+      picksPerHour: pph || 0
     });
     setRecentFlags(flags || []);
-    setChartData(mockData);
+    setChartData(chartPoints);
     setLoading(false);
   };
 
