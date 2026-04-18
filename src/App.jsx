@@ -5,6 +5,7 @@ import DemoDashboard from './views/DemoDashboard';
 import AdminSetup from './views/AdminSetup';
 import OrderInput from './views/OrderInput';
 import MobilePicker from './views/MobilePicker';
+import LocationFlags from './views/LocationFlags';
 
 // Temporary placeholder components for routes not yet implemented
 const Placeholder = ({ title }) => (
@@ -33,7 +34,7 @@ function App() {
               <Route path="/orders" element={<OrderInput />} />
               <Route path="/session" element={<Placeholder title="Pick Session UI" />} />
               <Route path="/picker" element={<MobilePicker />} />
-              <Route path="/flags" element={<Placeholder title="Location Flag Triage" />} />
+              <Route path="/flags" element={<LocationFlags />} />
             </Routes>
           </div>
           

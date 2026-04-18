@@ -1,15 +1,47 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
+import { supabase } from '../lib/supabase';
 import { LayoutDashboard, Settings, ShoppingCart, Map, Smartphone, Flag } from 'lucide-react';
 
 const Sidebar = () => {
+  const [flagCount, setFlagCount] = useState(0);
+
+  useEffect(() => {
+    fetchFlagCount();
+    
+    // Subscribe to REALTIME flag changes
+    const channel = supabase
+      .channel('sidebar-flags')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'location_flags' },
+        () => {
+          fetchFlagCount();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  const fetchFlagCount = async () => {
+    const { count } = await supabase
+      .from('location_flags')
+      .select('*', { count: 'exact', head: true })
+      .eq('resolved', false);
+    
+    setFlagCount(count || 0);
+  };
+
   const links = [
     { to: "/", label: "Demo & Dashboard", icon: <LayoutDashboard size={20} /> },
     { to: "/admin", label: "Admin Setup", icon: <Settings size={20} /> },
     { to: "/orders", label: "Order Input", icon: <ShoppingCart size={20} /> },
     { to: "/session", label: "Pick Sessions", icon: <Map size={20} /> },
     { to: "/picker", label: "Mobile Picker", icon: <Smartphone size={20} /> },
-    { to: "/flags", label: "Location Flags", icon: <Flag size={20} /> },
+    { to: "/flags", label: "Location Flags", icon: <Flag size={20} />, badge: flagCount > 0 ? flagCount : null },
   ];
 
   return (
@@ -27,15 +59,22 @@ const Sidebar = () => {
             key={link.to}
             to={link.to}
             className={({ isActive }) => 
-              `flex items-center gap-3 px-4 py-3 rounded-lg font-medium transition-colors ${
+              `flex items-center justify-between px-4 py-3 rounded-lg font-medium transition-colors ${
                 isActive 
                   ? "bg-[#1E293B] text-electric-light border border-[#334155]/50 shadow-inner" 
                   : "text-gray-400 hover:text-white hover:bg-[#111827]"
               }`
             }
           >
-            {link.icon}
-            {link.label}
+            <div className="flex items-center gap-3">
+              {link.icon}
+              {link.label}
+            </div>
+            {link.badge && (
+              <span className="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-lg shadow-red-500/20 animate-pulse">
+                {link.badge}
+              </span>
+            )}
           </NavLink>
         ))}
       </nav>

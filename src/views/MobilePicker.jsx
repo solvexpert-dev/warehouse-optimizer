@@ -149,6 +149,7 @@ export default function MobilePicker() {
       .from('location_flags')
       .insert({
         location_id: currentPick.location_id,
+        product_id: currentPick.order_items?.products?.id, // Capture what was being picked
         flagged_by: 'Demo Picker',
         reason: 'Empty Location'
       });
