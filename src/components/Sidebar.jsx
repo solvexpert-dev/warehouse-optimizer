@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import { LayoutDashboard, Settings, ShoppingCart, Map, Smartphone, Flag } from 'lucide-react';
+import { LayoutDashboard, Settings, ShoppingCart, Map, Smartphone, Flag, Boxes, Zap } from 'lucide-react';
 
 const Sidebar = () => {
   const [flagCount, setFlagCount] = useState(0);
@@ -36,12 +36,14 @@ const Sidebar = () => {
   };
 
   const links = [
-    { to: "/", label: "Demo & Dashboard", icon: <LayoutDashboard size={20} /> },
+    { to: "/", label: "Manager Dashboard", icon: <LayoutDashboard size={20} /> },
     { to: "/admin", label: "Admin Setup", icon: <Settings size={20} /> },
     { to: "/orders", label: "Order Input", icon: <ShoppingCart size={20} /> },
     { to: "/session", label: "Pick Sessions", icon: <Map size={20} /> },
     { to: "/picker", label: "Mobile Picker", icon: <Smartphone size={20} /> },
+    { to: "/packing", label: "Packing Station", icon: <Boxes size={20} /> },
     { to: "/flags", label: "Location Flags", icon: <Flag size={20} />, badge: flagCount > 0 ? flagCount : null },
+    { to: "/demo", label: "Visual Demo", icon: <Zap size={20} /> },
   ];
 
   return (

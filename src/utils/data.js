@@ -164,3 +164,31 @@ export const calculateOptimisedRoute = (orders) => {
   
   return { path, distance: Math.round(distance), time: Math.round(distance / 50) };
 };
+
+export const calculateSessionMetrics = (pickItems) => {
+  if (!pickItems || !Array.isArray(pickItems)) return { distance: 0, distanceSaved: 0, timeSavedMinutes: 0 };
+
+  const items = pickItems.map(pi => {
+    if (!pi || !pi.locations || !pi.locations.location_code) return null;
+    const parts = pi.locations.location_code.split('.');
+    if (parts.length < 2) return null;
+    const { x, y } = getCoordinates(parts[0], parts[1]);
+    return { ...pi, x, y };
+  }).filter(Boolean);
+
+  if (items.length === 0) return { distance: 0, distanceSaved: 0, timeSavedMinutes: 0 };
+
+  const optResult = calculateOptimisedRoute([{ items }]);
+  const naiveDistance = items.reduce((acc, item, idx) => {
+    if (idx === 0) return acc + Math.sqrt(Math.pow(item.x - PACKING_STATION.x, 2) + Math.pow(item.y - PACKING_STATION.y, 2));
+    const prev = items[idx - 1];
+    return acc + Math.sqrt(Math.pow(item.x - prev.x, 2) + Math.pow(item.y - prev.y, 2));
+  }, 0) + Math.sqrt(Math.pow(items[items.length-1].x - PACKING_STATION.x, 2) + Math.pow(items[items.length-1].y - PACKING_STATION.y, 2));
+
+  const distanceSaved = Math.max(0, Math.round(naiveDistance - optResult.distance));
+  return {
+    distance: optResult.distance || 0,
+    distanceSaved: distanceSaved || 0,
+    timeSavedMinutes: Math.round((distanceSaved / 1.4) / 60) || 0
+  };
+};

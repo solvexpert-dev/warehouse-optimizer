@@ -1,11 +1,14 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
-import DemoDashboard from './views/DemoDashboard';
 import AdminSetup from './views/AdminSetup';
 import OrderInput from './views/OrderInput';
 import MobilePicker from './views/MobilePicker';
 import LocationFlags from './views/LocationFlags';
+import ManagerDashboard from './views/ManagerDashboard';
+import PickSessions from './views/PickSessions';
+import PackingModule from './views/PackingModule';
+import DemoDashboard from './views/DemoDashboard';
 
 // Temporary placeholder components for routes not yet implemented
 const Placeholder = ({ title }) => (
@@ -29,12 +32,14 @@ function App() {
         <main className="flex-1 overflow-y-auto w-full h-screen relative">
           <div className="p-8 max-w-[1600px] mx-auto min-h-full">
             <Routes>
-              <Route path="/" element={<DemoDashboard />} />
+              <Route path="/" element={<ManagerDashboard />} />
               <Route path="/admin" element={<AdminSetup />} />
               <Route path="/orders" element={<OrderInput />} />
-              <Route path="/session" element={<Placeholder title="Pick Session UI" />} />
+              <Route path="/session" element={<PickSessions />} />
               <Route path="/picker" element={<MobilePicker />} />
               <Route path="/flags" element={<LocationFlags />} />
+              <Route path="/packing" element={<PackingModule />} />
+              <Route path="/demo" element={<DemoDashboard />} />
             </Routes>
           </div>
           
